@@ -87,6 +87,7 @@ e_uma_doenca(doencas_pulmonares_cronicas, cronica).
 e_uma_doenca(rinite, alergica).
 
 e_uma_doenca(outras_respiratorias, respiratoria).
+
 %--Posiveis sintomas iguais.
  
 subconjunto_sintomas(dispneia, falta_de_ar).
@@ -130,20 +131,27 @@ naomembro(_, []).
 naomembro(X, [H|T]) :-
     X \= H,
     naomembro(X, T).
-
+%--- lista sintomas
 listar_sintomas(Doenca, Lista) :-
     listar_sintomas(Doenca, [], Lista).
 
 listar_sintomas(Doenca, Acc, Lista) :-
     sintoma(Doenca, S, _, _, _, _, _),
      naomembro(S, Acc),
-    listar_sintomas(Doenca, [S|Acc], Lista).
+    listar_sintomas(Doenca, [S|Acc], Lista),!.
 
 listar_sintomas(_, Lista, Lista).
+
+%--- encontra quais doenças possui X sintomas
 quais_doencas_possui(Sintoma, Lista) :- quais_doencas_possui(Sintoma,[],Lista).
 quais_doencas_possui(Sintoma,Acc,Lista) :-
     sintoma(D,Sintoma,_,_,_,_,_), naomembro(D,Acc),
-    quais_doencas_possui(Sintoma,[D|Acc],Lista).
+    quais_doencas_possui(Sintoma,[D|Acc],Lista),!.
+quais_doencas_possui(Sintoma,Acc,Lista) :-
+    subconjunto_sintomas(Sintoma,S),
+    sintoma(D,S,_,_,_,_,_), 
+    naomembro(D,Acc),
+    quais_doencas_possui(Sintoma,[D|Acc],Lista),!.
 
 quais_doencas_possui(_,Lista,Lista).
 
@@ -160,7 +168,7 @@ peso_intensidade(severa, 1.2).
 peso_frequencia(continuo, 1.2).
 peso_frequencia(intermitente, 1.0).
 peso_frequencia(raro, 0.7).
-
+%-- ordena 1 doença em lista já ordenada
 inserir_ordenado((D,S), [], [(D,S)]).
 
 inserir_ordenado((D,S), [(D1,S1)|T], [(D,S),(D1,S1)|T]) :-
@@ -171,11 +179,13 @@ inserir_ordenado((D,S), [(D1,S1)|T], [(D1,S1)|R]) :-
     inserir_ordenado((D,S), T, R).
 
 
+%--ordena
 ordenar([], []).
 
 ordenar([H|T], R) :-
     ordenar(T, R1),
     inserir_ordenado(H, R1, R).
+
 
 
 ranking_doencas_aux([], _, []).
@@ -219,7 +229,7 @@ score_doenca(D, [H|T], Resultado) :-
 
 
 
-
+%%---
 diagnosticar_doenca(SintomasPaciente, Resultado) :-
     ranking_doencas(SintomasPaciente, Ranking),
     ordenar(Ranking, Resultado).
@@ -255,11 +265,31 @@ explicar(D, [H|T], [(H,P,Class,Int,Freq,Score)|R]) :-
 explicar(D,[_|T],R) :-
     explicar(D,T,R).
 
+imprimir_ranking(Lista) :-
+    imprimir_ranking(Lista, 1).
+
+imprimir_ranking([], _).
+
+imprimir_ranking([(Doenca,Score)|T], N) :-
+    write(N),
+    write('. '),
+    write(Doenca),
+    write(' ('),
+    write(Score),
+    write(')'),
+    nl,
+
+    N1 is N + 1,
+    imprimir_ranking(T, N1).
+
 perguntar(Sintoma, Resposta) :-
     write('Possui '),
     write(Sintoma),
     write('? (s/n) '),
     read(Resposta).
+
+
+    
 coletar_sintomas([], []).
 
 coletar_sintomas([H|T], [H|R]) :-
@@ -269,6 +299,9 @@ coletar_sintomas([H|T], [H|R]) :-
 
 coletar_sintomas([_|T], R) :-
     coletar_sintomas(T, R).
+
+
+
 consultar :-
     lista_de_sintomas(Lista),
     coletar_sintomas(Lista, SintomasPaciente),
@@ -282,4 +315,4 @@ consultar :-
 
     nl,
     write('Ranking das doencas:'), nl,
-    write(Resultado), nl.
+    imprimir_ranking(Resultado).
